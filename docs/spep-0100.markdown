@@ -1,0 +1,89 @@
+SPEP 100: Creating SimplePie_Feed
+=================================
+Status: Draft
+Type: Standards Track
+
+## Rationale
+This SPEP proposes splitting the existing feed-level methods from
+SimplePie_Core into a new class, known as SimplePie_Feed.
+
+Currently, SimplePie_Core handles both general library functions and
+feed-level metadata. This has lead to some weird handling, such as for
+multifeeds. Given that the multifeed approach appears to be the most
+used one, the code should reflect this, rather than the tacked-on
+implementation that currently exists.
+
+This SPEP proposes that a new SimplePie_Feed class will be created,
+separating the feed-level data access from the library functions. This
+new class will not be responsible for managing instances of itself,
+nor changing settings.
+
+The existing SimplePie_Core class will be stripped down to just
+managing methods, and will handle the management of SimplePie_Feed
+instances for multifeed use.
+
+## Implementation
+SimplePie_Core will act as an API in much the same way as currently
+available. However, accessor functions (generally those used after
+`init`) will become part of SimplePie_Feed.
+
+For single-feed usage, `SimplePie_Core::get_feed()` will retrieve the
+SimplePie_Feed object for use as an accessor. This means that previous
+code should be easily adaptable:
+
+	// Previously:
+	$feed = new SimplePie();
+	$feed->set_feed_url('http://example.com/');
+	$feed->init();
+	echo $feed->get_title();
+
+	// New-Style
+	$sp = new SimplePie();
+	$sp->set_feed_url('http://example.com/');
+	$sp->init();
+	echo $sp->get_feed()->get_title();
+
+For multifeeds, `SimplePie_Core::get_feeds()` will retrieve a list of
+SimplePie_Feed objects. This method will likely be rarely used, as it
+is not particularly useful.
+
+The `get_items()` method will exist in both SimplePie_Core and
+SimplePie_Feed. Under Feed, `get_items()` will return the items for
+the feed, as per the existing process. Under Core, `get_items()` will
+return the merged items from all Feed objects created by it (i.e. the
+Feed objects returned by `get_feeds()`).
+
+`SimplePie_Item::get_feed()` will now return the instance of the
+SimplePie_Feed that is the related feed, and only one instance of the
+SimplePie_Core class will exist for each set of requests.
+
+The current SimplePie_Core object could also be passed around to all
+child objects (and grandchildren, etc) for passing configuration
+between objects.
+
+## Advantages
+We avoid grouping a whole bunch of unrelated methods into
+SimplePie_Core as they exist currently. This allows us to clearly
+define which methods relate to the feeds, and which relate to the
+library (e.g. `set_*_class`).
+
+This also makes handling multifeeds easier. Rather than cloning a
+bunch of SimplePie_Core objects and then merging these, we can easily
+keep these separated, and avoid having redundant data.
+
+This method also makes it possible to access feed objects regardless
+of items. Currently, one must access the feed objects by looping
+through the items and collecting them (as no public API exists for
+accessing the multifeed objects).
+
+## Disadvantages
+The most obvious disadvantage is the major API breakage this would
+cause. This can be mitigated by mapping existing methods for
+single-feed usage (i.e. `SimplePie_Core::get_title()` would call
+`SimplePie_Feed::get_title()`). This will not have any impact on
+multifeeds, however, as the SimplePie_Core methods for this have
+undefined behaviour.
+
+Another disadvantage of this SPEP is that it will require time to
+migrate all the methods from SimplePie_Core to SimplePie_Feed, which
+is the scarcest resource on the project.
