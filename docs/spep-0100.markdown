@@ -1,7 +1,8 @@
 SPEP 100: Creating SimplePie_Feed
 =================================
-Status: Draft
-Type: Standards Track
+- Status: Draft
+- Type: Standards Track
+- Discussions-To: simplepie-support@yahoogroups.com
 
 ## Rationale
 This SPEP proposes splitting the existing feed-level methods from
